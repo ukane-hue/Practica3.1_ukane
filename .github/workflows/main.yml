@@ -1,0 +1,53 @@
+name: CI - Compilació i Tests Java
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    name: Compilar i Passar Tests (JUnit 5)
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Descarrega el codi del repositori
+      - name: Checkout del repositori
+        uses: actions/checkout@v4
+
+      # 2. Configura Java 17 (LTS)
+      - name: Configurar JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # 3. Descarrega les dependències de JUnit 5 (standalone console launcher)
+      - name: Descarregar JUnit 5 Platform Console Standalone
+        run: |
+          mkdir -p lib
+          curl -L -o lib/junit-platform-console-standalone.jar \
+            https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/1.10.2/junit-platform-console-standalone-1.10.2.jar
+
+      # 4. Compila les classes de producció (src/main/java)
+      - name: Compilar codi de producció
+        run: |
+          mkdir -p out/production
+          javac -d out/production src/main/java/CompteBancari.java
+
+      # 5. Compila les classes de test (src/test/java)
+      - name: Compilar tests
+        run: |
+          mkdir -p out/test
+          javac -cp out/production:lib/junit-platform-console-standalone.jar \
+            -d out/test \
+            src/test/java/CompteBancariTest.java
+
+      # 6. Executa els tests amb JUnit Platform
+      - name: Executar tests JUnit 5
+        run: |
+          java -jar lib/junit-platform-console-standalone.jar \
+            --class-path out/production:out/test \
+            --scan-class-path \
+            --fail-if-no-tests
